@@ -1,0 +1,75 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Builds
+dist/
+build/
+.next/
+out/
+
+# Logs
+logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.md
+
+# Editor / System
+.DS_Store
+*.swp
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Cache
+.cache/
+.eslintcache
+vite.config.time
+tmp/
+temp/
+
+# Coverage
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+<<<<<<< HEAD
+<<<<<<< HEAD
+# .NET build artifacts
+backend/bin/
+backend/obj/
+=======
+.dll
+.exe
+.json
+.pdb
+
+/backend/obj/
+>>>>>>> 0439e845ff88249abc3f2b19bdf2f172ebafe499
+=======
+
+/backend/obj/
+>>>>>>> 0439e845ff88249abc3f2b19bdf2f172ebafe499
+
+__pycache__/
+*.pyc
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+.venv 
+.env
