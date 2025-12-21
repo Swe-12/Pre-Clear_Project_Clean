@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Amazon.S3;
+using Microsoft.Extensions.Options;
 using PreClear.Api.Data;
 using PreClear.Api.Swagger;
+using PreClear.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,8 +71,22 @@ builder.Services.AddScoped<PreClear.Api.Interfaces.IShipmentRepository, PreClear
 builder.Services.AddScoped<PreClear.Api.Interfaces.IShipmentService, PreClear.Api.Services.ShipmentService>();
 builder.Services.AddScoped<PreClear.Api.Interfaces.IDocumentRepository, PreClear.Api.Repositories.DocumentRepository>();
 builder.Services.AddScoped<PreClear.Api.Interfaces.IDocumentService, PreClear.Api.Services.DocumentService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.INotificationService, PreClear.Api.Services.NotificationService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IS3StorageService, PreClear.Api.Services.S3StorageService>();
 builder.Services.AddScoped<PreClear.Api.Services.BrokerAssignmentService>(); // Add BrokerAssignmentService
 builder.Services.AddHttpContextAccessor(); // Add IHttpContextAccessor for JWT claims extraction
+
+// AWS S3 Configuration
+builder.Services.Configure<AwsS3Settings>(builder.Configuration.GetSection("AwsS3Settings"));
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+{
+    var s3Settings = sp.GetRequiredService<IOptions<AwsS3Settings>>().Value;
+    return new AmazonS3Client(
+        s3Settings.AccessKey,
+        s3Settings.SecretKey,
+        Amazon.RegionEndpoint.GetBySystemName(s3Settings.Region ?? "us-east-1")
+    );
+});
 
 // Connection
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");

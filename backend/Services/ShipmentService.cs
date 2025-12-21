@@ -106,7 +106,7 @@ namespace PreClear.Api.Services
                     dimUnit = pkg.DimensionUnit,
                     weight = pkg.Weight,
                     weightUnit = pkg.WeightUnit,
-                    stackable = pkg.IsStackable,
+                    stackable = pkg.Stackable,
                     products = new List<ProductView>()
                 };
 
@@ -117,16 +117,16 @@ namespace PreClear.Api.Services
                     {
                         packageView.products.Add(new ProductView
                         {
-                            name = item.ProductName,
+                            name = item.Name,
                             description = item.Description,
                             category = item.Category,
                             hsCode = item.HsCode,
                             qty = item.Quantity,
-                            uom = item.UnitOfMeasure,
+                            uom = item.Unit,
                             unitPrice = item.UnitPrice,
-                            totalValue = item.TotalPrice,
+                            totalValue = item.TotalValue,
                             originCountry = item.OriginCountry,
-                            reasonForExport = item.ReasonForExport
+                            reasonForExport = item.ExportReason
                         });
                     }
                 }
