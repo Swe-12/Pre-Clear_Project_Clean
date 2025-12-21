@@ -1,29 +1,44 @@
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-package-lock.json
-pnpm-lock.yaml
+##################################
+# Frontend (Node / Vite / React)
+##################################
 
-# Builds
+node_modules/
 dist/
 build/
 .next/
 out/
 
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+package-lock.json
+pnpm-lock.yaml
+
+##################################
 # Logs
-logs
+##################################
+
+logs/
 *.log
 
-# Environment files
+##################################
+# Environment & Secrets
+##################################
+
 .env
 .env.local
 .env.*.local
-*.md
 
-# Editor / System
+backend/appsettings.Development.json
+backend/appsettings.Local.json
+secrets.json
+
+##################################
+# Editor / OS
+##################################
+
 .DS_Store
 *.swp
 .idea/
@@ -31,37 +46,51 @@ logs
 *.sublime-project
 *.sublime-workspace
 
-# Cache
+##################################
+# Cache / Temp
+##################################
+
 .cache/
 .eslintcache
 vite.config.time
 tmp/
 temp/
 
+##################################
 # Coverage
+##################################
+
 coverage/
 
+##################################
 # TypeScript
+##################################
+
 *.tsbuildinfo
 
-# .NET build artifacts
+##################################
+# .NET (Backend)
+##################################
+
 backend/bin/
 backend/obj/
 *.dll
 *.exe
 *.pdb
 
-# Sensitive config files (use user-secrets instead)
-backend/appsettings.Development.json
-backend/appsettings.*.json
+##################################
+# Python (ML / Scripts)
+##################################
 
-# Python virtual environment
-venv/
-.venv/
-env/
 __pycache__/
 *.pyc
 
-# Environment
-.env
-.env.local
+venv/
+.venv/
+env/
+
+##################################
+# Misc
+##################################
+
+*.md
