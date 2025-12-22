@@ -41,6 +41,9 @@ import { BrokerChat } from "./components/broker/BrokerChat";
 import { BrokerProfile } from "./components/broker/BrokerProfile";
 import ApprovedShipviewpg from "./components/broker/ApprovedShipviewpg";
 
+// Notifications
+import { NotificationsPage } from "./components/NotificationsPage";
+
 // Admin Pages
 import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { UserManagement } from "./components/admin/UserManagement";
@@ -128,6 +131,14 @@ function AppShell() {
       }
     }
   }, [shipmentIdFromRoute, isLoggedIn, userRole, location.state?.shipment]);
+
+  // Handle direct access to /shipper/notifications or /broker/notifications route
+  useEffect(() => {
+    if (location.pathname.includes('/notifications') && isLoggedIn) {
+      console.log('[AppShell] Direct route to notifications');
+      setCurrentPage('notifications');
+    }
+  }, [location.pathname, isLoggedIn]);
 
   const handleNavigate = (page, data) => {
     console.log('[App.handleNavigate] Called with:', { page, data });
@@ -245,6 +256,8 @@ function AppShell() {
         );
       case "profile":
         return <ProfilePage userRole={userRole} onLogout={handleLogout} />;
+      case "notifications":
+        return <NotificationsPage userRole="shipper" />;
       default:
         return <ShipperDashboard onNavigate={handleNavigate} />;
     }
@@ -291,6 +304,8 @@ function AppShell() {
         return <BrokerChat onNavigate={handleNavigate} />;
       case "profile":
         return <ProfilePage userRole={userRole} onLogout={handleLogout} />;
+      case "notifications":
+        return <NotificationsPage userRole="broker" />;
       default:
         return <BrokerDashboard onNavigate={handleNavigate} />;
     }
@@ -356,6 +371,10 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/shipper/shipments/:id" element={<AppShell />} />
+          <Route path="/shipper/notifications" element={<AppShell />} />
+          <Route path="/broker/review/:id" element={<AppShell />} />
+          <Route path="/broker/notifications" element={<AppShell />} />
           <Route path="/shipments/:id" element={<AppShell />} />
           <Route path="/*" element={<AppShell />} />
           <Route path="*" element={<Navigate to="/" replace />} />

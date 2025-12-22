@@ -7,7 +7,7 @@ import {
   uploadShipmentDocument,
 } from '../../api/documents';
 
-export function ShipmentDocumentsPanel({ shipmentId, allowUpload = true }) {
+export function ShipmentDocumentsPanel({ shipmentId, allowUpload = false }) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -92,13 +92,14 @@ export function ShipmentDocumentsPanel({ shipmentId, allowUpload = true }) {
           <button
             onClick={refresh}
             disabled={loading}
+            aria-label="Refresh documents"
             className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           {allowUpload && (
-            <label className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer flex items-center gap-2">
+            <label className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer flex items-center gap-2" aria-label="Upload document">
               <Upload className="w-4 h-4" />
               {uploading ? 'Uploading…' : 'Upload'}
               <input
@@ -164,6 +165,7 @@ export function ShipmentDocumentsPanel({ shipmentId, allowUpload = true }) {
               <button
                 onClick={() => handleDownload(doc)}
                 disabled={downloadingId === doc.id}
+                aria-label={`Download ${doc.fileName || 'document'}`}
                 className="px-3 py-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />

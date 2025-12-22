@@ -13,11 +13,15 @@ namespace PreClear.Api.Services
     public class ChatService : IChatService
     {
         private readonly PreclearDbContext _db;
+        private readonly IShipmentRepository _shipmentRepository;
+        private readonly INotificationService _notificationService;
         private readonly ILogger<ChatService> _logger;
 
-        public ChatService(PreclearDbContext db, ILogger<ChatService> logger)
+        public ChatService(PreclearDbContext db, IShipmentRepository shipmentRepository, INotificationService notificationService, ILogger<ChatService> logger)
         {
             _db = db;
+            _shipmentRepository = shipmentRepository;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
@@ -25,6 +29,7 @@ namespace PreClear.Api.Services
         {
             return await _db.ShipmentMessages
                 .AsNoTracking()
+                .Include(m => m.Sender)
                 .Where(m => m.ShipmentId == shipmentId)
                 .OrderBy(m => m.CreatedAt)
                 .ToListAsync();
@@ -36,6 +41,10 @@ namespace PreClear.Api.Services
                 throw new ArgumentException("message is required", nameof(message));
             if (!senderId.HasValue)
                 throw new ArgumentException("sender_id is required", nameof(senderId));
+
+            var shipment = await _shipmentRepository.GetByIdAsync(shipmentId);
+            if (shipment == null)
+                throw new ArgumentException("shipment_not_found", nameof(shipmentId));
 
             var msg = new ShipmentMessage
             {
@@ -49,6 +58,34 @@ namespace PreClear.Api.Services
             await _db.SaveChangesAsync();
 
             _logger.LogInformation("Saved message {MessageId} for shipment {ShipmentId}", msg.Id, shipmentId);
+
+            // Notify the opposite party (shipper or broker) so they see a toast/email
+            try
+            {
+                long? recipientId = null;
+                if (shipment.AssignedBrokerId.HasValue && senderId.Value != shipment.AssignedBrokerId.Value)
+                {
+                    recipientId = shipment.AssignedBrokerId.Value; // sender is shipper
+                }
+                else if (senderId.Value != shipment.CreatedBy)
+                {
+                    recipientId = shipment.CreatedBy; // sender is broker/admin
+                }
+
+                if (recipientId.HasValue)
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        recipientId.Value,
+                        "chat_message",
+                        "New shipment message",
+                        message.Length > 120 ? message[..120] + "…" : message,
+                        shipmentId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create chat notification for shipment {ShipmentId}", shipmentId);
+            }
             return msg;
         }
 

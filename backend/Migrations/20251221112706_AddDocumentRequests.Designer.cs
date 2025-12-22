@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PreClear.Api.Data;
 
@@ -10,9 +11,11 @@ using PreClear.Api.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(PreclearDbContext))]
-    partial class PreclearDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251221112706_AddDocumentRequests")]
+    partial class AddDocumentRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

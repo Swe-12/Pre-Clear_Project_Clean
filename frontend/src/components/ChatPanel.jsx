@@ -1,24 +1,57 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageCircle, Send, X, User } from 'lucide-react';
-import { useMessages } from '../hooks/useShipments';
-import { shipmentsStore } from '../store/shipmentsStore';
+import { listShipmentMessages, sendShipmentMessage } from '../api/chat';
 
 export function ChatPanel({ shipmentId, userRole, userName, isOpen, onClose }) {
-  const messages = useMessages(shipmentId);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [newMessage, setNewMessage] = useState('');
+
+  useEffect(() => {
+    if (!isOpen || !shipmentId) return;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await listShipmentMessages(shipmentId);
+        setMessages(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setError(err?.message || 'Failed to load messages');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [isOpen, shipmentId]);
 
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
 
-    shipmentsStore.addMessage({
-      id: `msg-${Date.now()}`,
+    const optimistic = {
+      id: `tmp-${Date.now()}`,
       shipmentId,
+      senderId: null,
       sender: userRole,
       senderName: userName,
       message: newMessage,
+      createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString(),
       type: 'message'
-    });
+    };
+    setMessages(prev => [...prev, optimistic]);
+
+    sendShipmentMessage(shipmentId, newMessage)
+      .then((resp) => {
+        const saved = resp || {};
+        setMessages(prev => prev.map(m => m.id === optimistic.id ? saved : m));
+      })
+      .catch((err) => {
+        setError(err?.message || 'Failed to send message');
+        setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      });
 
     setNewMessage('');
   };
@@ -43,6 +76,8 @@ export function ChatPanel({ shipmentId, userRole, userName, isOpen, onClose }) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {loading && <p className="text-slate-500 text-sm">Loading messages…</p>}
         {messages.length === 0 && (
           <div className="text-center text-slate-500 py-8">
             <MessageCircle className="w-12 h-12 mx-auto mb-2 text-slate-300" />
@@ -52,12 +87,14 @@ export function ChatPanel({ shipmentId, userRole, userName, isOpen, onClose }) {
         )}
         
         {messages.map((message) => {
-          const isCurrentUser = message.sender === userRole;
+          const messageId = message.id || message.Id;
+          const senderLabel = message.senderName || message.SenderName || `User ${message.senderId || message.SenderId || ''}`;
+          const isCurrentUser = message.sender === userRole || message.senderName === userName || message.SenderName === userName;
           const isSystem = message.type === 'system' || message.type === 'document-request';
           
           return (
             <div
-              key={message.id}
+              key={messageId}
               className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
             >
               <div
@@ -72,12 +109,12 @@ export function ChatPanel({ shipmentId, userRole, userName, isOpen, onClose }) {
                 <div className="flex items-center gap-2 mb-1">
                   <User className={`w-3 h-3 ${isCurrentUser ? 'text-blue-100' : 'text-slate-500'}`} />
                   <span className={`text-xs ${isCurrentUser ? 'text-blue-100' : 'text-slate-500'}`}>
-                    {message.senderName}
+                    {senderLabel}
                   </span>
                 </div>
                 <p className="text-sm">{message.message}</p>
                 <p className={`text-xs mt-1 ${isCurrentUser ? 'text-blue-100' : 'text-slate-500'}`}>
-                  {new Date(message.timestamp).toLocaleString()}
+                  {new Date(message.createdAt || message.CreatedAt || message.timestamp).toLocaleString()}
                 </p>
               </div>
             </div>

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useShipments } from '../../hooks/useShipments';
 import { getShipmentById, pollShipmentStatus, submitAi, updateShipmentStatus as apiUpdateShipmentStatus, generateToken as apiGenerateToken, assignBroker } from '../../api/shipments';
+import { listShipmentDocumentRequests } from '../../api/documents';
 import { ShipmentChatPanel } from '../ShipmentChatPanel';
 import { shipmentsStore } from '../../store/shipmentsStore';
 import { getCurrencyByCountry, formatCurrency } from '../../utils/validation';
@@ -64,6 +65,8 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
   const [showTokenNotification, setShowTokenNotification] = useState(false);
   const [resubmittingToBroker, setResubmittingToBroker] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [documentRequests, setDocumentRequests] = useState([]);
+  const [loadingDocumentRequests, setLoadingDocumentRequests] = useState(false);
   
   // Initialize from props and set loading state
   // Sync loading/error overrides from parent route
@@ -147,6 +150,29 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
 
     return () => { if (intervalId) clearInterval(intervalId); };
   }, [currentShipment?.id, currentShipment?.AiApprovalStatus, currentShipment?.BrokerApprovalStatus, currentShipment?.status]);
+
+  // Fetch document requests from backend
+  useEffect(() => {
+    if (!currentShipment?.id) return;
+    
+    const fetchDocumentRequests = async () => {
+      try {
+        setLoadingDocumentRequests(true);
+        const requests = await listShipmentDocumentRequests(currentShipment.id);
+        setDocumentRequests(Array.isArray(requests) ? requests : []);
+      } catch (err) {
+        console.error('Failed to fetch document requests:', err);
+        setDocumentRequests([]);
+      } finally {
+        setLoadingDocumentRequests(false);
+      }
+    };
+
+    fetchDocumentRequests();
+    // Poll every 10 seconds for new document requests
+    const interval = setInterval(fetchDocumentRequests, 10000);
+    return () => clearInterval(interval);
+  }, [currentShipment?.id]);
 
   // aiProcessing effect moved below guard after aiApproval is defined
 
@@ -568,7 +594,7 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
           {currentShipment?.id && (
             <ShipmentDocumentsPanel
               shipmentId={currentShipment.id}
-              allowUpload={currentShipment?.status !== 'token-generated'}
+              allowUpload={false}
             />
           )}
 
@@ -793,13 +819,38 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-red-900 mb-1">Additional Documents Requested</p>
-                    <p className="text-red-700 text-sm mb-2">
+                    <p className="text-red-700 text-sm mb-3">
                       The broker has requested additional documentation. Please upload the missing documents below.
                     </p>
+                    
+                    {loadingDocumentRequests && (
+                      <p className="text-red-700 text-sm mb-2">Loading document requests...</p>
+                    )}
+                    
+                    {!loadingDocumentRequests && documentRequests.length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {documentRequests.map((req) => (
+                          <div key={req.id} className="bg-red-100 rounded p-3">
+                            <p className="text-red-800 font-medium mb-1">
+                              Request #{req.id} - Status: {req.status}
+                            </p>
+                            <p className="text-red-700 text-sm mb-1">
+                              <strong>Requested documents:</strong> {req.requestedDocumentNames}
+                            </p>
+                            {req.requestMessage && (
+                              <p className="text-red-700 text-sm italic border-l-2 border-red-400 pl-2">
+                                Message: {req.requestMessage}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
                     {currentShipment?.brokerNotes && (
-                      <p className="text-red-800 text-sm italic border-l-2 border-red-400 pl-3 mt-2">
+                      <p className="text-red-800 text-sm italic border-l-2 border-red-400 pl-3">
                         Broker note: {currentShipment?.brokerNotes}
                       </p>
                     )}

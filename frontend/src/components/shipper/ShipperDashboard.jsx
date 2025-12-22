@@ -1,5 +1,4 @@
 import { PackagePlus, Package, Clock, CheckCircle, XCircle, AlertTriangle, TrendingUp, Upload, DollarSign, Eye, Edit, Filter, MessageSquare } from 'lucide-react';
-import { NotificationPanel } from '../NotificationPanel';
 import { shipmentsStore, createDefaultShipment } from '../../store/shipmentsStore';
 import { useState } from 'react';
 import { useShipments } from '../../hooks/useShipments';
@@ -317,11 +316,6 @@ export function ShipperDashboard({ onNavigate }) {
       <div className="mb-8">
         <h1 className="text-yellow-900 text-3xl font-bold mb-2">Shipper Dashboard</h1>
         <p className="text-slate-600 text-base opacity-80">Manage your shipments and track pre-clearance approvals</p>
-      </div>
-
-      {/* Real-time Notifications */}
-      <div className="mb-6">
-        <NotificationPanel role="shipper" onNavigate={onNavigate} />
       </div>
 
       {/* Stats Cards */}

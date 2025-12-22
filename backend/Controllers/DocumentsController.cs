@@ -142,6 +142,49 @@ namespace PreClear.Api.Controllers
             }
         }
 
+        [HttpPost("shipments/{shipmentId}/request")]
+        public async Task<IActionResult> RequestDocuments(long shipmentId, [FromBody] CreateDocumentRequestDto request)
+        {
+            if (request == null || request.DocumentNames?.Count == 0)
+                return BadRequest(new { error = "document_names_required" });
+            // Message optional
+
+            try
+            {
+                var brokerId = GetUserId();
+                if (brokerId == 0)
+                    return Unauthorized(new { error = "invalid_token" });
+
+                var docNames = request.DocumentNames ?? new List<string>();
+                var message = request.Message ?? string.Empty;
+
+                var created = await _service.RequestDocumentsAsync(shipmentId, brokerId, docNames, message);
+                _logger.LogInformation("Document request {RequestId} created for shipment {ShipmentId}", created.Id, shipmentId);
+                return Ok(new { success = true, request = created });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error requesting documents for shipment {ShipmentId}", shipmentId);
+                return StatusCode(500, new { error = "internal_error", detail = ex.Message });
+            }
+        }
+
+        [HttpGet("shipments/{shipmentId}/requests")]
+        public async Task<IActionResult> GetDocumentRequests(long shipmentId)
+        {
+            try
+            {
+                _logger.LogInformation("Fetching document requests for shipment {ShipmentId}", shipmentId);
+                var requests = await _service.GetDocumentRequestsAsync(shipmentId);
+                return Ok(requests);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching document requests");
+                return StatusCode(500, new { error = "internal_error" });
+            }
+        }
+
         private static string GetContentType(string path)
         {
             var ext = Path.GetExtension(path).ToLowerInvariant();

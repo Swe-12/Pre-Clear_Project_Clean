@@ -9,6 +9,7 @@ import { getAuthToken } from '../../utils/api';
 import { HsSuggestionPanel } from './HsSuggestionPanel';
 import { createShipment, updateShipment } from '../../api/shipments';
 import { getProfile } from '../../api/auth';
+import { uploadShipmentDocument } from '../../api/documents';
 
 const modes = ['Air', 'Sea', 'Road', 'Rail', 'Courier', 'Multimodal'];
 const shipmentTypes = ['Domestic', 'International'];
@@ -316,6 +317,8 @@ export function ShipmentForm({ shipment, onNavigate }) {
   const [documentFiles, setDocumentFiles] = useState({});
   const [analyzingDocuments, setAnalyzingDocuments] = useState(false);
   const [documentValidationError, setDocumentValidationError] = useState('');
+  const [uploadingDocuments, setUploadingDocuments] = useState({});
+  const [documentUploadErrors, setDocumentUploadErrors] = useState({});
   const [errors, setErrors] = useState({});
   const [pricing, setPricing] = useState({
     basePrice: 0,
@@ -1843,53 +1846,68 @@ export function ShipmentForm({ shipment, onNavigate }) {
                             )}
                             <input
                               type="file"
-                              accept=".pdf,.jpg,.jpeg,.png"
+                              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xlsx"
                               onChange={async (e) => {
                                 const file = e.target.files[0];
-                                if (file) {
-                                  setDocumentFiles(prev => ({ ...prev, [doc.name]: file }));
-                                  
-                                  // Mark document as uploaded in backend if we have a shipmentId
-                                  if (formData.id) {
-                                    try {
-                                      const token = getAuthToken();
-                                      await fetch(`/api/documents/shipments/${formData.id}/mark-uploaded`, {
-                                        method: 'POST',
-                                        headers: {
-                                          'Content-Type': 'application/json',
-                                          ...(token ? { Authorization: `Bearer ${token}` } : {})
-                                        },
-                                        credentials: 'include',
-                                        body: JSON.stringify({ documentName: doc.name })
-                                      });
-                                      
-                                      // Update local state to reflect uploaded status
-                                      setRequiredDocuments(prev => prev.map(d => 
-                                        d.name === doc.name ? { ...d, uploaded: true } : d
-                                      ));
-                                    } catch (err) {
-                                      console.error('Failed to mark document as uploaded:', err);
-                                    }
-                                  } else {
-                                    // For new shipments, just update local state
+                                if (!file) return;
+
+                                // Store file locally for immediate UI feedback
+                                setDocumentFiles(prev => ({ ...prev, [doc.name]: file }));
+                                setDocumentUploadErrors(prev => ({ ...prev, [doc.name]: null }));
+
+                                // Upload to S3 if we have a shipmentId
+                                if (formData.id && /^\d+$/.test(formData.id)) {
+                                  setUploadingDocuments(prev => ({ ...prev, [doc.name]: true }));
+                                  try {
+                                    console.log(`[ShipmentForm] Uploading ${doc.name} to S3 for shipment ${formData.id}`);
+                                    await uploadShipmentDocument(formData.id, file, doc.name);
+                                    console.log(`[ShipmentForm] Successfully uploaded ${doc.name} to S3`);
+                                    
+                                    // Update local state to reflect uploaded status
                                     setRequiredDocuments(prev => prev.map(d => 
                                       d.name === doc.name ? { ...d, uploaded: true } : d
                                     ));
+                                  } catch (err) {
+                                    console.error(`[ShipmentForm] Failed to upload ${doc.name}:`, err);
+                                    setDocumentUploadErrors(prev => ({
+                                      ...prev,
+                                      [doc.name]: err.message || 'Upload failed. Please try again.'
+                                    }));
+                                  } finally {
+                                    setUploadingDocuments(prev => ({ ...prev, [doc.name]: false }));
                                   }
+                                } else {
+                                  // For new shipments without ID yet, just mark as uploaded locally
+                                  setRequiredDocuments(prev => prev.map(d => 
+                                    d.name === doc.name ? { ...d, uploaded: true } : d
+                                  ));
                                 }
                               }}
                               className="hidden"
                               id={`file-${idx}`}
+                              disabled={uploadingDocuments[doc.name]}
                             />
                             <label
                               htmlFor={`file-${idx}`}
-                              className="px-4 py-2 transition-colors cursor-pointer text-sm flex items-center gap-2 text-white font-medium"
+                              className={`px-4 py-2 transition-colors cursor-pointer text-sm flex items-center gap-2 text-white font-medium ${uploadingDocuments[doc.name] ? 'opacity-75 cursor-not-allowed' : ''}`}
                               style={{ ...yellowButtonStyle, outline: 'none', boxShadow: 'none' }}
                             >
-                              <Upload className="w-4 h-4" style={{ color: '#2F1B17' }} />
-                              {doc.uploaded || documentFiles[doc.name] ? 'Change File' : 'Upload'}
+                              {uploadingDocuments[doc.name] ? (
+                                <>
+                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900"></div>
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="w-4 h-4" style={{ color: '#2F1B17' }} />
+                                  {doc.uploaded || documentFiles[doc.name] ? 'Change File' : 'Upload'}
+                                </>
+                              )}
                             </label>
-                            {(doc.uploaded || documentFiles[doc.name]) && (
+                            {documentUploadErrors[doc.name] && (
+                              <div className="text-xs text-red-700 ml-2">{documentUploadErrors[doc.name]}</div>
+                            )}
+                            {(doc.uploaded || documentFiles[doc.name]) && !documentUploadErrors[doc.name] && (
                               <span className="text-sm text-green-700 flex items-center gap-1">
                                 <CheckCircle2 className="w-4 h-4" />
                                 {documentFiles[doc.name] ? documentFiles[doc.name].name : 'Uploaded'}

@@ -48,3 +48,23 @@ export function saveBlobToFile(blob, fileName) {
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 }
+
+export async function requestShipmentDocuments(shipmentId, documentNames, message) {
+  try {
+    console.log('[documents.requestShipmentDocuments] Calling:', `/Documents/shipments/${shipmentId}/request`, { documentNames, message });
+    const resp = await http.post(`/Documents/shipments/${shipmentId}/request`, {
+      documentNames,
+      message,
+    });
+    console.log('[documents.requestShipmentDocuments] Response:', resp);
+    return resp.data;
+  } catch (err) {
+    console.error('[documents.requestShipmentDocuments] Error:', err.response?.status, err.response?.data || err.message);
+    throw err;
+  }
+}
+
+export async function listShipmentDocumentRequests(shipmentId) {
+  const resp = await http.get(`/Documents/shipments/${shipmentId}/requests`);
+  return resp.data;
+}
