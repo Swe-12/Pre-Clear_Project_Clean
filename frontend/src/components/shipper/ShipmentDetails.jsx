@@ -27,7 +27,7 @@ import {
   ZoomOut
 } from 'lucide-react';
 import { useShipments } from '../../hooks/useShipments';
-import { getShipmentById, pollShipmentStatus, submitAi, updateShipmentStatus as apiUpdateShipmentStatus, generateToken as apiGenerateToken, assignBroker } from '../../api/shipments';
+import { getShipmentById, pollShipmentStatus, submitAi, updateShipmentStatus as apiUpdateShipmentStatus, generateToken as apiGenerateToken, assignBroker, deleteShipment } from '../../api/shipments';
 import http, { getAuthToken } from '../../api/http';
 import { uploadShipmentDocument, listShipmentDocuments, downloadShipmentDocument } from '../../api/documents';
 import { ShipmentChatPanel } from '../ShipmentChatPanel';
@@ -63,6 +63,7 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
   const [isLoading, setIsLoading] = useState(!!loadingOverride);
   const [error, setError] = useState(errorOverride);
   const [chatOpen, setChatOpen] = useState(false);
+  const [showBrokerAlert, setShowBrokerAlert] = useState(false);
   const [viewingDocument, setViewingDocument] = useState(null);
   const [s3Docs, setS3Docs] = useState([]);
   const [viewerUrl, setViewerUrl] = useState(null);
@@ -100,10 +101,9 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
         setError(null);
         if (routeId) {
           const data = await getShipmentById(routeId);
-          // API returns ShipmentDetailDto; use the Shipment payload directly for UI
-          const s = data?.shipment || data?.Shipment || data || null;
+          // API returns normalized shipment; use it directly
           if (!cancelled) {
-            setCurrentShipment(s);
+            setCurrentShipment(data);
             setIsLoading(false);
           }
         } else {
@@ -672,11 +672,22 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
     }
   };
 
-  const handleCancelShipment = () => {
-    const updatedShipment = { ...currentShipment, status: 'cancelled' };
-    shipmentsStore.saveShipment(updatedShipment);
-    setShowCancelConfirm(false);
-    onNavigate('dashboard');
+  const handleCancelShipment = async () => {
+    if (!currentShipment?.id) return;
+    try {
+      // Delete shipment from database
+      await deleteShipment(currentShipment.id);
+      
+      // Remove from local store
+      shipmentsStore.removeShipment(currentShipment.id);
+      
+      setShowCancelConfirm(false);
+      onNavigate('dashboard');
+    } catch (error) {
+      console.error('Error deleting shipment:', error);
+      setError('Failed to delete shipment. Please try again.');
+      setShowCancelConfirm(false);
+    }
   };
 
   const handleViewDocument = (docName) => {
@@ -798,7 +809,16 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
 
   // After guard: safe to access shipment fields directly without optional chaining
   const shipmentData = currentShipment;
+  const canChatWithBroker = Boolean(shipmentData.assignedBrokerId);
   const currency = getCurrencyByCountry(shipmentData.originCountry || 'US');
+
+  const handleOpenChat = () => {
+    if (!canChatWithBroker) {
+      setShowBrokerAlert(true);
+      return;
+    }
+    setChatOpen(true);
+  };
 
   return (
     <div>
@@ -809,6 +829,7 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
             <h1 className="text-slate-900 mb-2">Shipment Details</h1>
             {/* <p className="text-slate-600">Complete shipment ID: {shipmentData.id}</p> */}
           </div>
+<<<<<<< HEAD
           <div className="flex items-center gap-3">
             <button
               onClick={() => onNavigate && onNavigate('create-shipment', currentShipment)}
@@ -826,6 +847,16 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
               Chat with Broker
             </button>
           </div>
+=======
+          <button
+            onClick={handleOpenChat}
+            disabled={!canChatWithBroker}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-60"
+          >
+            <MessageCircle className="w-4 h-4" />
+            Chat with Broker
+          </button>
+>>>>>>> 9638c40a864481ac2c6935043b55625eb118a3ef
         </div>
       </div>
 
@@ -930,6 +961,7 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
                   <p className="text-slate-500 text-sm mb-1">Currency</p>
                   <p className="text-slate-900">{shipmentData.currency || currency?.code || 'USD'}</p>
                 </div>
+                
                 <div>
                   <p className="text-slate-500 text-sm mb-1">Pickup</p>
                   <p className="text-slate-900">{shipmentData.pickupType || 'N/A'}</p>
@@ -1062,7 +1094,7 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
                                   </div>
                                   <div>
                                     <p className="text-slate-500 text-xs mb-1">Category</p>
-                                    <p className="text-slate-900 text-sm">{product.category || 'N/A'}</p>
+                                    <p className="text-slate-900 text-sm">{product.category}</p>
                                   </div>
                                   <div>
                                     <p className="text-slate-500 text-xs mb-1">UOM</p>
@@ -1070,11 +1102,11 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
                                   </div>
                                   <div>
                                     <p className="text-slate-500 text-xs mb-1">Quantity</p>
-                                    <p className="text-slate-900 text-sm">{product.qty || 'N/A'}</p>
+                                    <p className="text-slate-900 text-sm">{product.qty || product.quantity || 'N/A'}</p>
                                   </div>
                                   <div>
                                     <p className="text-slate-500 text-xs mb-1">Unit Price</p>
-                                    <p className="text-slate-900 text-sm">{product.unitPrice || 'N/A'}</p>
+                                    <p className="text-slate-900 text-sm">{formatCurrency(parseFloat(product.unitPrice || product.unit_price || 0), currentShipment.currency || currency.code)}</p>
                                   </div>
                                   <div className="col-span-2">
                                     <p className="text-slate-500 text-xs mb-1">Total Value</p>
@@ -1547,8 +1579,9 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
             <h3 className="text-slate-900 mb-4">Quick Actions</h3>
             <div className="space-y-2">
               <button
-                onClick={() => setChatOpen(true)}
-                className="w-full px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors flex items-center justify-between group"
+                onClick={handleOpenChat}
+                disabled={!canChatWithBroker}
+                className="w-full px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors flex items-center justify-between group disabled:opacity-60"
               >
                 <span className="flex items-center gap-2">
                   <MessageCircle className="w-4 h-4" />
@@ -1644,13 +1677,32 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
       </div>
 
       {/* Chat Panel */}
-      <ShipmentChatPanel
-        shipmentId={currentShipment.id}
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-        userRole="shipper"
-        userName="ABC Exports"
-      />
+      {canChatWithBroker && (
+        <ShipmentChatPanel
+          shipmentId={currentShipment.id}
+          isOpen={chatOpen}
+          onClose={() => setChatOpen(false)}
+          userRole="shipper"
+          userName="ABC Exports"
+        />
+      )}
+
+      {showBrokerAlert && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Broker not assigned yet</h3>
+            <p className="text-slate-600 mb-4">Chat will be available once a broker is assigned to this shipment.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowBrokerAlert(false)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Document Viewer Modal */}
       {viewingDocument && (
@@ -1772,3 +1824,4 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
     </div>
   );
 }
+
