@@ -20,6 +20,11 @@ namespace PreClear.Api.Repositories
             return doc;
         }
 
+        /// <summary>
+        /// Gets all documents for a shipment. Only returns non-deleted documents since 
+        /// deleted documents are physically removed from the database.
+        /// This ensures AI validation only processes currently existing documents.
+        /// </summary>
         public async Task<List<ShipmentDocument>> GetByShipmentIdAsync(long shipmentId)
         {
             return await _db.ShipmentDocuments.AsNoTracking().Where(d => d.ShipmentId == shipmentId).OrderByDescending(d => d.UploadedAt).ToListAsync();
@@ -30,10 +35,27 @@ namespace PreClear.Api.Repositories
             return await _db.ShipmentDocuments.FindAsync(id);
         }
 
+        public async Task<ShipmentDocument?> GetByIdAsync(long id)
+        {
+            return await _db.ShipmentDocuments.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id);
+        }
+
         public async Task UpdateAsync(ShipmentDocument doc)
         {
             _db.ShipmentDocuments.Update(doc);
             await _db.SaveChangesAsync();
+        }
+
+        public async Task<int> DeleteByShipmentIdAsync(long shipmentId)
+        {
+            var docs = await _db.ShipmentDocuments.Where(d => d.ShipmentId == shipmentId).ToListAsync();
+            if (docs.Count == 0)
+            {
+                return 0;
+            }
+
+            _db.ShipmentDocuments.RemoveRange(docs);
+            return await _db.SaveChangesAsync();
         }
 
         public async Task<bool> MarkAsUploadedAsync(long shipmentId, string documentName)
@@ -48,20 +70,14 @@ namespace PreClear.Api.Repositories
             return true;
         }
 
-        public async Task<DocumentRequest> CreateDocumentRequestAsync(DocumentRequest request)
+        public async Task<bool> DeleteByIdAsync(long id)
         {
-            _db.DocumentRequests.Add(request);
-            await _db.SaveChangesAsync();
-            return request;
-        }
+            var doc = await _db.ShipmentDocuments.FindAsync(id);
+            if (doc == null) return false;
 
-        public async Task<List<DocumentRequest>> GetDocumentRequestsByShipmentAsync(long shipmentId)
-        {
-            return await _db.DocumentRequests
-                .AsNoTracking()
-                .Where(r => r.ShipmentId == shipmentId)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
+            _db.ShipmentDocuments.Remove(doc);
+            await _db.SaveChangesAsync();
+            return true;
         }
     }
 }

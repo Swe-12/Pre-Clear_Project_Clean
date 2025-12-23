@@ -49,22 +49,20 @@ export function saveBlobToFile(blob, fileName) {
   window.URL.revokeObjectURL(url);
 }
 
-export async function requestShipmentDocuments(shipmentId, documentNames, message) {
-  try {
-    console.log('[documents.requestShipmentDocuments] Calling:', `/Documents/shipments/${shipmentId}/request`, { documentNames, message });
-    const resp = await http.post(`/Documents/shipments/${shipmentId}/request`, {
-      documentNames,
-      message,
-    });
-    console.log('[documents.requestShipmentDocuments] Response:', resp);
-    return resp.data;
-  } catch (err) {
-    console.error('[documents.requestShipmentDocuments] Error:', err.response?.status, err.response?.data || err.message);
-    throw err;
-  }
+/**
+ * Validates all documents for a shipment against form data and compliance rules
+ * Returns validation result with status (approved/failed) and list of issues if any
+ */
+export async function validateShipmentDocuments(shipmentId) {
+  const resp = await http.post(`/Documents/shipments/${shipmentId}/validate`);
+  return resp.data;
 }
 
-export async function listShipmentDocumentRequests(shipmentId) {
-  const resp = await http.get(`/Documents/shipments/${shipmentId}/requests`);
+/**
+ * Gets the current validation status for a shipment
+ * Returns status: not_validated, approved, failed, or error
+ */
+export async function getValidationStatus(shipmentId) {
+  const resp = await http.get(`/Documents/shipments/${shipmentId}/validation-status`);
   return resp.data;
 }
