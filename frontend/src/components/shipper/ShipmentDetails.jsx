@@ -829,7 +829,6 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
             <h1 className="text-slate-900 mb-2">Shipment Details</h1>
             {/* <p className="text-slate-600">Complete shipment ID: {shipmentData.id}</p> */}
           </div>
-<<<<<<< HEAD
           <div className="flex items-center gap-3">
             <button
               onClick={() => onNavigate && onNavigate('create-shipment', currentShipment)}
@@ -840,23 +839,14 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
               Edit
             </button>
             <button
-              onClick={() => setChatOpen(true)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+              onClick={handleOpenChat}
+              disabled={!canChatWithBroker}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-60"
             >
               <MessageCircle className="w-4 h-4" />
               Chat with Broker
             </button>
           </div>
-=======
-          <button
-            onClick={handleOpenChat}
-            disabled={!canChatWithBroker}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-60"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Chat with Broker
-          </button>
->>>>>>> 9638c40a864481ac2c6935043b55625eb118a3ef
         </div>
       </div>
 
@@ -1824,4 +1814,7 @@ export function ShipmentDetails({ shipment, onNavigate, loadingOverride = false,
     </div>
   );
 }
+
+
+
 
